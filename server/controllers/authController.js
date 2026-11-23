@@ -3,7 +3,7 @@ import userModel from "../models/userModel.js";
 import jwt from "jsonwebtoken";
 
 // For user registration
-export const register  = async (req, res) => {
+ const register  = async (req, res) => {
     const {name, email, password} = req.body;
 
     if(!name || !email || !password){
@@ -57,7 +57,7 @@ export const register  = async (req, res) => {
 }
 
 // For User Login
-export const login = async (req, res) => {
+ const login = async (req, res) => {
     const {email, password} = req.body
 
     //1) Check email and password
@@ -100,16 +100,23 @@ export const login = async (req, res) => {
 
 // For user logout
 
-export const logout = async(req, res)  => {
+ const logout = async(req, res)  => {
     try{
-         res.clearCookie('token' , token , {
+         res.clearCookie('token' , {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'node' : 'strict',           
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',           
         });
 
         return res.json({success: true, message: "Logged Out"})
     }catch(error) {
      res.json({success: false, message:error.message})
     }
+}
+
+
+export const authController ={
+    register,
+    login, 
+    logout
 }
