@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import userModel from "../models/userModel.js";
 import jwt from "jsonwebtoken";
+import transporter from "../config/nodemailer.js";
 
 // For user registration
  const register  = async (req, res) => {
@@ -46,8 +47,23 @@ import jwt from "jsonwebtoken";
 
         })
 
+        //sending welcome email
+        const mailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: email,
+            subject: "Welcome to Foysal Jaman",
+            text: `Welcome to FJ website. Your Account has been created with email id: ${email}`
+
+        }
+
+        await transporter.sendMail(mailOptions)
+
+
+
         return res.json({success: true})
 
+
+        
     }catch(error) {
         return res.status(500).json({
             success: false,
@@ -112,7 +128,7 @@ import jwt from "jsonwebtoken";
     }catch(error) {
      res.json({success: false, message:error.message})
     }
-}
+} 
 
 
 export const authController ={
