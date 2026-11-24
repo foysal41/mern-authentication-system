@@ -212,10 +212,116 @@ const verifyEmail = async (req, res) => {
         }
 }
 
+
+//Check if user is authenticated
+const isAuthenticated = async (req, res) => {
+
+    try{
+
+        return res.json({success: true})
+    }catch(error){
+        res.json({success: false, message:error.message})
+    }  
+}
+
+// Send password reset OTP
+const sendResetOtp = async(req, res) => {
+    const {email} = req.body;
+
+    //1) if user email not provide for reset password
+    if(!email) {
+        return res.json({success: false, message:"Email is required"})
+    }
+
+
+    try{
+        //2)  Server will find the email from DB
+        const user = await userModel.findOne({email});
+        if(!user){
+            return res.json({success: false, message: "User not found"})
+        }
+
+        
+        //3) if email already not verified send OTP Number
+        const otp = String(Math.floor(100000 + Math.random() * 900000))
+
+
+        //4) Save this OTP in DB
+        user.resetOtp = otp;
+        user.resetOtpExpireAt = Date.now() + 15 * 60 * 1000 // 15 min
+        await user.save();
+
+        //5) We are send "OTP" to user
+         const mailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: "Account Verification OTP",
+            text: `Your OTP for resetting your password is   ${otp}. Use this OTP to proceed with resetting your password.`
+
+        }
+        await transporter.sendMail(mailOptions)
+        return res.json({success: true, message:'OTP send to your email'})
+
+    }catch(error) {
+       res.json({success: false, message:error.message}) 
+    }
+
+}
+
+
+// Reset User Password
+const resetPassword = async(req, res) => {
+    const {email, otp, newPassword} = req.body;
+
+    if(!email || !otp || !newPassword){
+        return res.json({success: false, message: "Email OTP, and New password are required"})
+    }
+
+    try{
+        //1) find the user from DB
+        const user = await userModel.findOne({email});
+        if(!user){
+             return res.json({success: false, message: "User not found"})
+        }
+
+        //2) if user OTP and DB OTP not Matched
+        if(user.resetOtp === "" || user.resetOtp !== otp){
+            return res.json({success: false, message: "Invalid OTP"})
+        }
+
+        //3) we'll check for expire 
+        if(user.resetOtpExpireAt < Date.now()){
+            return res.json({success: false, message: "OTP Expired"})
+        }
+
+        //4) If user is not expired then we'll save new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+        user.password = hashedPassword;
+        user.resetOtp = '';
+        user.resetOtpExpireAt = 0;
+
+        await user.save();
+        return res.json({success: true, message: "Password has been reset successfully"})
+
+
+
+
+
+    }catch(error){
+        res.json({success: false, message:error.message})
+    }
+}
+
+
 export const authController ={
     register,
     login, 
     logout,
     sendVerifyOtp,
-    verifyEmail
+    verifyEmail,
+    isAuthenticated,
+    sendResetOtp, 
+    resetPassword,
+    
 }
